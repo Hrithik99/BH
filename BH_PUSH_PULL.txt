@@ -1,32 +1,36 @@
-import requests
+import pyodbc
 import pandas as pd
 
-# Function to calculate distance using Bing Maps API
-def calculate_distance(api_key, origin_lat, origin_long, dest_lat, dest_long):
-    url = f"http://dev.virtualearth.net/REST/v1/Routes/DistanceMatrix?origins={origin_lat},{origin_long}&destinations={dest_lat},{dest_long}&travelMode=driving&key={api_key}"
-    response = requests.get(url).json()
-    distance = response['resourceSets'][0]['resources'][0]['results'][0]['travelDistance']
-    return distance
+# Define the connection parameters
+server = 'your_server_name'  # e.g., 'localhost\\SQLEXPRESS'
+database = 'your_database_name'
+username = 'your_username'
+password = 'your_password'
 
-# Load employee and center data
-employees = pd.read_csv('employees.csv')
-centers = pd.read_csv('centers.csv')
+# Create the connection string
+connection_string = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
 
-# Bing Maps API key
-api_key = 'YOUR_BING_MAPS_API_KEY'
+# Establish the connection
+connection = pyodbc.connect(connection_string)
 
-# Create a new dataframe for the results
-results = []
+# Create a cursor object using the connection
+cursor = connection.cursor()
 
-# Calculate distances
-for _, emp in employees.iterrows():
-    for _, center in centers.iterrows():
-        dist_home = calculate_distance(api_key, emp['home_latitude'], emp['home_longitude'], center['center_latitude'], center['center_longitude'])
-        dist_work = calculate_distance(api_key, emp['work_latitude'], emp['work_longitude'], center['center_latitude'], center['center_longitude'])
-        results.append([emp['employee_id'], center['center_id'], dist_home, dist_work])
+# SQL queries to retrieve data from the tables
+employee_query = 'SELECT * FROM Employees'
+childcare_query = 'SELECT * FROM ChildCareCenters'
 
-# Create results dataframe
-results_df = pd.DataFrame(results, columns=['employee_id', 'center_id', 'distance_from_home', 'distance_from_work'])
+# Load data into pandas DataFrames
+employees_df = pd.read_sql(employee_query, connection)
+childcare_df = pd.read_sql(childcare_query, connection)
 
-# Export to CSV
-results_df.to_csv('distances.csv', index=False)
+# Close the connection
+cursor.close()
+connection.close()
+
+# Display the first few rows of each DataFrame
+print("Employees DataFrame:")
+print(employees_df.head())
+
+print("\nChild Care Centers DataFrame:")
+print(childcare_df.head())
