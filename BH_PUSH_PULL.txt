@@ -1,0 +1,32 @@
+import requests
+import pandas as pd
+
+# Function to calculate distance using Bing Maps API
+def calculate_distance(api_key, origin_lat, origin_long, dest_lat, dest_long):
+    url = f"http://dev.virtualearth.net/REST/v1/Routes/DistanceMatrix?origins={origin_lat},{origin_long}&destinations={dest_lat},{dest_long}&travelMode=driving&key={api_key}"
+    response = requests.get(url).json()
+    distance = response['resourceSets'][0]['resources'][0]['results'][0]['travelDistance']
+    return distance
+
+# Load employee and center data
+employees = pd.read_csv('employees.csv')
+centers = pd.read_csv('centers.csv')
+
+# Bing Maps API key
+api_key = 'YOUR_BING_MAPS_API_KEY'
+
+# Create a new dataframe for the results
+results = []
+
+# Calculate distances
+for _, emp in employees.iterrows():
+    for _, center in centers.iterrows():
+        dist_home = calculate_distance(api_key, emp['home_latitude'], emp['home_longitude'], center['center_latitude'], center['center_longitude'])
+        dist_work = calculate_distance(api_key, emp['work_latitude'], emp['work_longitude'], center['center_latitude'], center['center_longitude'])
+        results.append([emp['employee_id'], center['center_id'], dist_home, dist_work])
+
+# Create results dataframe
+results_df = pd.DataFrame(results, columns=['employee_id', 'center_id', 'distance_from_home', 'distance_from_work'])
+
+# Export to CSV
+results_df.to_csv('distances.csv', index=False)
